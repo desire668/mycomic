@@ -145,7 +145,13 @@ NavigationLink(destination: ReaderView(route: ...)) { ... }
 - `testDetailNeverUsesSidebarChapters`：页面只有「最近更新」侧栏时返回空章节，
   而不是其他漫画章节。
 
-CI 会在 iOS 模拟器上运行全部单元测试，结果以 GitHub Actions 记录为准。
+GitHub Actions 运行记录（提交 `55849e5`）：
+<https://github.com/desire668/mycomic/actions/runs/44706386623>
+
+| Job | 结果 |
+| --- | --- |
+| Unit tests (iOS Simulator) | ✅ success（全部单元测试通过） |
+| Build MyComic (unsigned) | ✅ success（Release 编译 + 打包 IPA + 发布 `unsigned-latest`） |
 
 ### 7.3 阅读器 UI
 
@@ -153,6 +159,9 @@ CI 会在 iOS 模拟器上运行全部单元测试，结果以 GitHub Actions �
   系统 TabBar/导航栏不会出现；退出后自动恢复。
 - `.statusBar(hidden:)` 与自绘工具栏联动。
 - 该行为已通过 Release 编译验证；实际视觉与手势需在真机/模拟器安装 IPA 后确认。
+
+发布产物（滚动更新，标签 `unsigned-latest`）：
+<https://github.com/desire668/mycomic/releases/download/unsigned-latest/MyComic-unsigned.ipa>
 
 ## 8. 尚未解决的问题
 
