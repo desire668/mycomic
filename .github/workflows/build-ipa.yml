@@ -3,6 +3,7 @@ name: Build Unsigned IPA
 on:
   push:
     branches: [main]
+    tags: ["v*"]
   workflow_dispatch:
   release:
     types: [published]
@@ -217,6 +218,26 @@ jobs:
             未签名 IPA 需使用 AltStore / SideStore / Sideloadly / 爱思助手自行签名安装。
           prerelease: true
           make_latest: "false"
+          files: MyComic-unsigned.ipa
+          fail_on_unmatched_files: true
+
+      - name: Publish tagged release IPA
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: MyComic ${{ github.ref_name }} (unsigned IPA)
+          body: |
+            MyComic ${{ github.ref_name }} 未签名 IPA。
+
+            本版本修复：
+            - 不同漫画共用同一份章节列表的问题（章节改为从详情页漫画自身的章节数据解析）。
+            - 阅读器底部 TabBar 未隐藏的问题（阅读器改为全屏呈现）。
+
+            未签名 IPA 需使用 AltStore / SideStore / Sideloadly / 爱思助手自行签名安装。
+          draft: false
+          prerelease: false
+          make_latest: true
           files: MyComic-unsigned.ipa
           fail_on_unmatched_files: true
 
