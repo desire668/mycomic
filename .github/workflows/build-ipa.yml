@@ -24,7 +24,7 @@ env:
 jobs:
   build:
     name: Build MyComic (unsigned)
-    runs-on: macos-14
+    runs-on: macos-latest
     timeout-minutes: 30
 
     steps:
@@ -33,6 +33,8 @@ jobs:
 
       - name: Show toolchain
         run: |
+          sw_vers
+          ls -1 /Applications | grep -i xcode || true
           xcodebuild -version
           swift --version
           xcodebuild -showsdks
