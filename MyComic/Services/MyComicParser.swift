@@ -215,11 +215,11 @@ enum MyComicParser {
             })?.textContent
 
             let rowText = row.textContent
-            let updated = Regex.firstMatch(pattern: "\\d{4}-\\d{2}-\\d{2}", in: rowText)
+            let updated = Regex.firstFullMatch(pattern: "\\d{4}-\\d{2}-\\d{2}", in: rowText)
             let score = row.queryAll { $0.tag == "td" }
                 .compactMap { cell -> String? in
                     let value = cell.textContent
-                    return Regex.firstMatch(pattern: "^\\d+(\\.\\d+)?$", in: value)
+                    return Regex.firstFullMatch(pattern: "^\\d+(\\.\\d+)?$", in: value)
                 }
                 .last
 
@@ -362,6 +362,15 @@ enum Regex {
               match.numberOfRanges > 1,
               let groupRange = Range(match.range(at: 1), in: string) else { return nil }
         return String(string[groupRange])
+    }
+
+    /// Returns the whole match, for patterns without capture groups.
+    static func firstFullMatch(pattern: String, in string: String) -> String? {
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: []) else { return nil }
+        let range = NSRange(string.startIndex..<string.endIndex, in: string)
+        guard let match = regex.firstMatch(in: string, options: [], range: range),
+              let matchRange = Range(match.range, in: string) else { return nil }
+        return String(string[matchRange])
     }
 
     static func matches(pattern: String, in string: String) -> [String] {

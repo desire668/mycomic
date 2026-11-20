@@ -173,13 +173,14 @@ xcodebuild test \
 - `test` Job：在 iOS 模拟器上运行 `MyComicTests`（解析、网络错误映射、Cloudflare 检测、图片下采样）。
 - `build` Job：`macos-latest` + Release + `generic/platform=iOS` + `CODE_SIGNING_ALLOWED=NO`，无需证书和 Apple Developer 账号。
 - 校验：`.app` 是否存在、`Info.plist`、Bundle Identifier（`com.mycomic.app`）、最低系统（15.0）、Payload 结构、zip 完整性。
-- 产物：`MyComic-unsigned.ipa`（Artifacts，保留 30 天）；Release 触发时自动附加到 Release 资产。
+- 产物：`MyComic-unsigned.ipa`（Artifacts，保留 30 天）；main 分支构建成功后自动更新滚动预发布 Release，Release 触发时附加到对应 Release 资产。
 
 ### IPA 下载
 
-1. 打开仓库 **Actions** → 最新成功的 **Build Unsigned IPA**。
-2. 在页面底部 **Artifacts** 下载 `MyComic-unsigned-ipa.zip`，解压得到 `MyComic-unsigned.ipa`。
-3. 或在 **Releases** 页面下载同名的 `.ipa` 文件（由 Release 触发构建时生成）。
+1. 直接下载（每次 main 构建成功后自动更新）：
+   [MyComic-unsigned.ipa](https://github.com/desire668/mycomic/releases/download/unsigned-latest/MyComic-unsigned.ipa)
+2. 或打开仓库 **Actions** → 最新成功的 **Build Unsigned IPA**，在页面底部 **Artifacts** 下载 `MyComic-unsigned-ipa.zip`，解压得到 `MyComic-unsigned.ipa`。
+3. 或在 **Releases** 页面下载同名 `.ipa` 文件（由 Release 触发构建时生成）。
 
 ---
 

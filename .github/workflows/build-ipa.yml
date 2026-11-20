@@ -206,6 +206,20 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
+      - name: Publish rolling prerelease IPA
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: unsigned-latest
+          name: MyComic unsigned (latest)
+          body: |
+            自动构建的未签名 IPA，每次 push 到 main 成功后更新。
+            未签名 IPA 需使用 AltStore / SideStore / Sideloadly / 爱思助手自行签名安装。
+          prerelease: true
+          make_latest: "false"
+          files: MyComic-unsigned.ipa
+          fail_on_unmatched_files: true
+
       - name: Attach IPA to GitHub Release
         if: github.event_name == 'release'
         uses: softprops/action-gh-release@v2
