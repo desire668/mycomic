@@ -67,16 +67,17 @@ jobs:
             echo "Test failure report for \`${{ github.sha }}\`"
             echo ''
             echo '```'
-            grep -nE "error:|failed|Failing tests|TEST FAILED|xcodebuild: error" test.log | head -120 || true
+            grep -nE "error:|Test Case .*failed|Failing tests|TEST FAILED|xcodebuild: error" test.log | cut -c1-500 | head -60 || true
             echo '```'
           } > test-comment.md
+          wc -c test-comment.md
           cat test-comment.md
           jq -Rs '{body: .}' test-comment.md > test-payload.json
-          curl -sS -X POST \
+          curl --fail-with-body -sS -X POST \
             -H "Authorization: Bearer $GH_TOKEN" \
             -H "Accept: application/vnd.github+json" \
             "https://api.github.com/repos/${{ github.repository }}/commits/${{ github.sha }}/comments" \
-            -d @test-payload.json
+            -d @test-payload.json || echo "comment post failed"
 
       - name: Upload test log
         if: always()
