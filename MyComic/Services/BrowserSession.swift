@@ -31,6 +31,7 @@ enum BrowserSession {
 
         // The site's pages are responsive; keep the standard mobile viewport.
         configuration.suppressesIncrementalRendering = false
+        configuration.applicationNameForUserAgent = "MyComic/1.0"
         return configuration
     }()
 
@@ -44,7 +45,6 @@ enum BrowserSession {
         webView.isOpaque = false
         webView.backgroundColor = .systemBackground
         webView.scrollView.backgroundColor = .systemBackground
-        webView.applicationNameForUserAgent = "MyComic/1.0"
         return webView
     }
 
