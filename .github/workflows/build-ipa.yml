@@ -1,0 +1,111 @@
+name: Build Unsigned IPA
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-ipa-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PROJECT: MyComic.xcodeproj
+  SCHEME: MyComic
+  CONFIGURATION: Release
+  APP_PATH: build/Build/Products/Release-iphoneos/MyComic.app
+  IPA_NAME: MyComic-unsigned.ipa
+
+jobs:
+  build:
+    name: Build MyComic (unsigned)
+    runs-on: macos-14
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Show toolchain
+        run: |
+          xcodebuild -version
+          swift --version
+          xcodebuild -showsdks
+
+      - name: Resolve project and scheme
+        run: |
+          ls -la
+          xcodebuild -list -project "$PROJECT"
+
+      - name: Build unsigned .app
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project "$PROJECT" \
+            -scheme "$SCHEME" \
+            -configuration "$CONFIGURATION" \
+            -sdk iphoneos \
+            -destination "generic/platform=iOS" \
+            -derivedDataPath build \
+            ARCHS=arm64 \
+            ONLY_ACTIVE_ARCH=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGN_ENTITLEMENTS="" \
+            DEVELOPMENT_TEAM="" \
+            clean build | tee build.log
+
+      - name: Verify .app bundle
+        run: |
+          test -d "$APP_PATH"
+          /usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$APP_PATH/Info.plist"
+          /usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$APP_PATH/Info.plist"
+          ls -la "$APP_PATH"
+
+      - name: Package .app into Payload and zip IPA
+        run: |
+          set -euo pipefail
+          rm -rf Payload "$IPA_NAME"
+          mkdir -p Payload
+          cp -R "$APP_PATH" Payload/
+          zip -qry "$IPA_NAME" Payload
+          ls -lh "$IPA_NAME"
+
+      - name: Verify IPA structure
+        run: |
+          set -euo pipefail
+          test -f "$IPA_NAME"
+          unzip -l "$IPA_NAME" | head -30
+          unzip -l "$IPA_NAME" | grep -q "Payload/MyComic.app/MyComic"
+          echo "IPA_OK"
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: MyComic-unsigned-ipa
+          path: MyComic-unsigned.ipa
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log
+          path: |
+            build.log
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Attach IPA to GitHub Release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: MyComic-unsigned.ipa
+          fail_on_unmatched_files: true
