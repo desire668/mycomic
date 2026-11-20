@@ -22,6 +22,46 @@ env:
   IPA_NAME: MyComic-unsigned.ipa
 
 jobs:
+  test:
+    name: Unit tests (iOS Simulator)
+    runs-on: macos-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Show toolchain
+        run: |
+          xcodebuild -version
+          xcrun simctl list runtimes
+
+      - name: Run unit tests
+        run: |
+          set -o pipefail
+          DEVICE=$(xcrun simctl list devices available | grep -oE 'iPhone [0-9]+( Pro Max| Pro| Plus| mini)?' | head -1)
+          if [ -z "$DEVICE" ]; then
+            echo "No iPhone simulator found; available devices:"
+            xcrun simctl list devices available
+            exit 1
+          fi
+          echo "Using simulator: $DEVICE"
+          xcodebuild test \
+            -project "$PROJECT" \
+            -scheme "$SCHEME" \
+            -destination "platform=iOS Simulator,name=$DEVICE" \
+            -derivedDataPath build-tests \
+            CODE_SIGNING_ALLOWED=NO | tee test.log
+
+      - name: Upload test log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-log
+          path: test.log
+          if-no-files-found: ignore
+          retention-days: 7
+
   build:
     name: Build MyComic (unsigned)
     runs-on: macos-latest
@@ -65,9 +105,16 @@ jobs:
 
       - name: Verify .app bundle
         run: |
+          set -euo pipefail
           test -d "$APP_PATH"
+          test -f "$APP_PATH/Info.plist"
+          test -f "$APP_PATH/MyComic"
           /usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$APP_PATH/Info.plist"
           /usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$APP_PATH/Info.plist"
+          /usr/libexec/PlistBuddy -c "Print :MinimumOSVersion" "$APP_PATH/Info.plist"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP_PATH/Info.plist")" = "com.mycomic.app"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :MinimumOSVersion' "$APP_PATH/Info.plist")" = "15.0"
+          plutil -lint "$APP_PATH/Info.plist"
           ls -la "$APP_PATH"
 
       - name: Package .app into Payload and zip IPA
@@ -83,8 +130,11 @@ jobs:
         run: |
           set -euo pipefail
           test -f "$IPA_NAME"
+          unzip -t "$IPA_NAME"
           unzip -l "$IPA_NAME" | head -30
           unzip -l "$IPA_NAME" | grep -q "Payload/MyComic.app/MyComic"
+          unzip -l "$IPA_NAME" | grep -q "Payload/MyComic.app/Info.plist"
+          test "$(unzip -Z1 "$IPA_NAME" | head -1)" = "Payload/"
           echo "IPA_OK"
 
       - name: Upload IPA artifact
