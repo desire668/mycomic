@@ -98,6 +98,14 @@ final class ComicRepository {
     /// detail page when the reader page itself does not expose them.
     func readerContext(comicId: String?, chapterId: String) async throws -> ReaderContext {
         let pages = try await api.chapterPages(id: chapterId)
+
+        // The reader page links back to its own comic ("返回目录"). If that id
+        // disagrees with the comic the user opened, stop instead of showing
+        // another comic's chapter.
+        if let comicId = comicId, let pageComicId = pages.comicId, pageComicId != comicId {
+            throw AppError.parse("该章节属于漫画 \(pageComicId)，与当前漫画 \(comicId) 不匹配。")
+        }
+
         var chapters: [Chapter] = []
         var comicTitle = pages.comicTitle
 

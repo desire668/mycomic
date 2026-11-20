@@ -177,7 +177,7 @@ Cookie: cf_clearance=<已脱敏>
 |---|---|
 | 地址 | `GET /cn/comics/{comicId}`（示例 `1128`） |
 | 返回格式 | `text/html` |
-| 章节列表 | **服务端一次性渲染全部章节**（示例 603 章，与页面"共 603 话"一致），无需分页 |
+| 章节列表 | **服务端写入 Alpine `x-data` 的章节 JSON 数组**（示例 1128 为 473 个可读章节），详情页不再依赖客户端渲染即可解析；「共 603 话」是作品元数据，与实际可读章节数可能不同 |
 | 排序 | 站点是前端 Alpine.js 对章节数组做 `reverse()`，无服务端排序参数 |
 | 收藏 | 详情页有"加入收藏"按钮（Alpine `isSynced` 控制），未登录点击后按钮直接隐藏，无接口可见 |
 | 标记 | ✅ 已验证 |
@@ -193,8 +193,8 @@ Cookie: cf_clearance=<已脱敏>
 | 标签 | `热血`、`冒险`、`格斗`、`少年` |
 | 封面 | `https://biccam.com/comics/1128-6f942d.jpg` |
 | 章节数 | `共 603 话` |
-| 第一章链接 | `https://mycomic.com/cn/chapters/9832` |
-| 开始阅读 | `https://mycomic.com/cn/chapters/9771` |
+| 第一章链接 | `https://mycomic.com/cn/chapters/9832`（章节数组最后一项） |
+| 开始阅读 | `https://mycomic.com/cn/chapters/9771`（服务端推荐位，**不属于该漫画的章节数组**） |
 
 解析规则：
 
@@ -205,17 +205,19 @@ Cookie: cf_clearance=<已脱敏>
 - 标签：`a[href*='filter[tag]']` / `filter%5Btag%5D`；
 - 地区：`a[href*='filter[country]']`；
 - 状态：`a[href*='filter[end]']` 文本，兜底正文"连载中/已完结"；
-- 章节：`a[href*='/cn/chapters/']`，按章节 id 去重；标题取链接文本（如 `第1150话`）；DOM 顺序为倒序，App 内提供正序/倒序切换（本地反转，与站点行为一致）；
+- 章节：解析第一个包含 `chapters:` 的 `x-data` 属性，取出 `[{id,title}]` JSON 数组（先做 HTML 实体反转义），按 id 去重；**禁止全文档扫描 `a[href*='/cn/chapters/']`**，因为页面还含全站「最近更新」侧栏，其链接属于其他漫画，会导致不同漫画显示相同章节；
+- 回退：页面缺少 `x-data` 时，只接受 `grid-cols*` 章节容器内的链接，并跳过 `<template>` 与「开始阅读/上一话/下一话/返回目录」；
+- 「开始阅读」按钮的服务端默认链接可能指向推荐章节（如 1128 的 `/cn/chapters/9771`），不属于该漫画章节数组，不能作为章节来源；
 - 章节数：正则 `共\s*(\d+)\s*话`，兜底为去重后章节数。
 
 ### 3.5 章节阅读图片
 
 | 项目 | 内容 |
 |---|---|
-| 地址 | `GET /cn/chapters/{chapterId}`（示例 `9771`） |
-| 返回格式 | `text/html`，页面直接包含全部 `<img>`（示例 210 页，非懒加载、无 data-src） |
+| 地址 | `GET /cn/chapters/{chapterId}`（已验证示例 `814565`，属于 1128 第1148话） |
+| 返回格式 | `text/html`，页面直接包含全部 `<img>`（示例 15 页，非懒加载、无 data-src） |
 | 图片地址 | `https://biccam.com/chapters/{chapterId}/{pageNo}-{hash}.jpg` |
-| 已验证样本 | `https://biccam.com/chapters/9771/1-c57cb5.jpg`、`/2-d254bd.jpg`、`/3-3d2ef2.jpg` |
+| 已验证样本 | `https://biccam.com/chapters/814565/1-777d0c.jpg`、`/2-e85334.jpg`、`/3-bee0e4.jpg` |
 | 图片格式 | 统一 `image/jpeg`（CDN 不做 WebP 转换，`cf-polished: format_not_supported`） |
 | 标记 | ✅ 已验证 |
 

@@ -11,6 +11,7 @@ struct ShelfView: View {
     @EnvironmentObject private var library: LibraryStore
     @EnvironmentObject private var settings: SettingsStore
     @State private var showClearHistoryConfirm = false
+    @State private var readerRoute: ReaderRoute?
 
     var body: some View {
         NavigationView {
@@ -42,6 +43,9 @@ struct ShelfView: View {
                 },
                 secondaryButton: .cancel(Text("取消"))
             )
+        }
+        .fullScreenCover(item: $readerRoute) { route in
+            ReaderView(route: route)
         }
     }
 
@@ -116,13 +120,15 @@ struct ShelfView: View {
                 }
 
                 ForEach(library.history) { record in
-                    NavigationLink(destination: ReaderView(route: ReaderRoute(
-                        comicId: record.comicId,
-                        comicTitle: record.comicTitle,
-                        coverURLString: record.coverURLString,
-                        chapterId: record.chapterId,
-                        chapterTitle: record.chapterTitle
-                    ))) {
+                    Button {
+                        readerRoute = ReaderRoute(
+                            comicId: record.comicId,
+                            comicTitle: record.comicTitle,
+                            coverURLString: record.coverURLString,
+                            chapterId: record.chapterId,
+                            chapterTitle: record.chapterTitle
+                        )
+                    } label: {
                         historyRow(record)
                     }
                     .buttonStyle(PlainButtonStyle())

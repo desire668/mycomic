@@ -9,6 +9,7 @@ struct HomeView: View {
     @StateObject private var viewModel = HomeViewModel()
     @EnvironmentObject private var session: SessionViewModel
     @EnvironmentObject private var library: LibraryStore
+    @State private var readerRoute: ReaderRoute?
 
     var body: some View {
         NavigationView {
@@ -31,6 +32,9 @@ struct HomeView: View {
         .navigationViewStyle(StackNavigationViewStyle())
         .onAppear {
             viewModel.loadIfNeeded()
+        }
+        .fullScreenCover(item: $readerRoute) { route in
+            ReaderView(route: route)
         }
     }
 
@@ -64,13 +68,15 @@ struct HomeView: View {
     @ViewBuilder
     private var continueReadingCard: some View {
         if let record = library.continueReading {
-            NavigationLink(destination: ReaderView(route: ReaderRoute(
-                comicId: record.comicId,
-                comicTitle: record.comicTitle,
-                coverURLString: record.coverURLString,
-                chapterId: record.chapterId,
-                chapterTitle: record.chapterTitle
-            ))) {
+            Button {
+                readerRoute = ReaderRoute(
+                    comicId: record.comicId,
+                    comicTitle: record.comicTitle,
+                    coverURLString: record.coverURLString,
+                    chapterId: record.chapterId,
+                    chapterTitle: record.chapterTitle
+                )
+            } label: {
                 HStack(spacing: 12) {
                     RemoteImageView(urlString: record.coverURLString, maxPixelSize: 320)
                         .frame(width: 54, height: 72)

@@ -48,6 +48,7 @@ struct ReaderView: View {
             }
         }
         .navigationBarHidden(true)
+        .statusBar(hidden: !viewModel.showBars)
         .preferredColorScheme(.dark)
         .onAppear {
             viewModel.load()

@@ -75,9 +75,16 @@ final class ParserTests: XCTestCase {
     <a href="/cn/comics?filter[tag]=rexue">热血</a>
     <a href="/cn/comics?filter[end]=0">连载中</a>
     <p>共 603 话</p>
-    <a href="/cn/chapters/9001">第 603 话</a>
-    <a href="/cn/chapters/9002">第 602 话</a>
+    <div x-data="{ chapters: [{&quot;id&quot;:9001,&quot;title&quot;:&quot;第 603 话&quot;},{&quot;id&quot;:9002,&quot;title&quot;:&quot;第 602 话&quot;},{&quot;id&quot;:9,&quot;title&quot;:&quot;第 1 话（序）&quot;}] }">
+      <div class="grid grid-cols-3 gap-2">
+        <template x-for="chapter in chapters"><a href="https://mycomic.com/cn/comics/1">第 1 话</a></template>
+      </div>
+    </div>
     <a href="/cn/chapters/9001">开始阅读</a>
+    <section>
+      <h3>最近更新</h3>
+      <div><a href="/cn/comics/5555">别的漫画</a><a href="/cn/chapters/7777">第 9 话</a></div>
+    </section>
     </body></html>
     """
 
@@ -92,8 +99,46 @@ final class ParserTests: XCTestCase {
         XCTAssertEqual(detail.status, "连载中")
         XCTAssertEqual(detail.tags, ["魔幻", "热血"])
         XCTAssertEqual(detail.chapterCount, 603)
-        XCTAssertEqual(detail.chapters.map { $0.id }, ["9001", "9002"])
+        XCTAssertEqual(detail.chapters.map { $0.id }, ["9001", "9002", "9"])
+        XCTAssertFalse(detail.chapters.contains { $0.id == "7777" })
         XCTAssertFalse(detail.chapters.contains { $0.title == "开始阅读" })
+    }
+
+    // MARK: - Chapter ownership (regression)
+
+    func testDetailChaptersFallbackToChapterGrid() {
+        let html = """
+        <html><body>
+        <div class="grid grid-cols-3 gap-2">
+          <a href="/cn/chapters/501">第 2 话</a>
+          <a href="/cn/chapters/502">第 1 话</a>
+        </div>
+        <section>
+          <h3>最近更新</h3>
+          <div><a href="/cn/comics/5555">别的漫画</a><a href="/cn/chapters/7777">第 9 话</a></div>
+        </section>
+        </body></html>
+        """
+
+        let detail = MyComicParser.detail(from: html, comicId: "1234")
+        XCTAssertEqual(detail.chapters.map { $0.id }, ["501", "502"])
+        XCTAssertEqual(detail.chapters.map { $0.title }, ["第 2 话", "第 1 话"])
+    }
+
+    func testDetailNeverUsesSidebarChapters() {
+        let html = """
+        <html><body>
+        <a href="/cn/chapters/9001">开始阅读</a>
+        <section>
+          <h3>最近更新</h3>
+          <div><a href="/cn/comics/5555">别的漫画</a><a href="/cn/chapters/7777">第 9 话</a></div>
+        </section>
+        </body></html>
+        """
+
+        let detail = MyComicParser.detail(from: html, comicId: "1234")
+        XCTAssertTrue(detail.chapters.isEmpty)
+        XCTAssertFalse(detail.chapters.contains { $0.id == "7777" })
     }
 
     // MARK: - Chapter images

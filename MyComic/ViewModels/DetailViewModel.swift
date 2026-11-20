@@ -21,6 +21,7 @@ final class DetailViewModel: ObservableObject {
     private let repository: ComicRepository
     private let library: LibraryStore
     private var loadTask: Task<Void, Never>?
+    private var loadGeneration = 0
 
     init(comicId: String,
          title: String,
@@ -61,22 +62,29 @@ final class DetailViewModel: ObservableObject {
 
     func reload() {
         loadTask?.cancel()
+        loadGeneration += 1
+        let generation = loadGeneration
         isLoading = true
         error = nil
         loadTask = Task { [weak self] in
             guard let self = self else { return }
             do {
                 let result = try await self.repository.detail(comicId: self.comicId, forceRefresh: true)
-                if Task.isCancelled { return }
+                // A newer request (or a dismissed screen) must not be
+                // overwritten by this one.
+                guard !Task.isCancelled, generation == self.loadGeneration else { return }
                 self.detail = result
                 self.error = nil
             } catch let appError as AppError {
+                guard !Task.isCancelled, generation == self.loadGeneration else { return }
                 if !appError.isCancelled {
                     self.error = appError
                 }
             } catch {
+                guard !Task.isCancelled, generation == self.loadGeneration else { return }
                 self.error = .other(error.localizedDescription)
             }
+            guard generation == self.loadGeneration else { return }
             self.isLoading = false
         }
     }

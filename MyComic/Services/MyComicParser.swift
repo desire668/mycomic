@@ -105,10 +105,54 @@ enum MyComicParser {
         )
     }
 
+    /// Chapters are taken from the comic's own Alpine `x-data` array, which the
+    /// server renders inside the detail page. Scanning every
+    /// `a[href*="/cn/chapters/"]` is not safe: the page also contains a
+    /// site-wide "最近更新" sidebar with chapters of other comics, so a global
+    /// scan made every comic appear to have the same chapters.
     private static func parseChapters(in document: HTMLDocument) -> [Chapter] {
+        chaptersFromAlpineData(in: document) ?? chaptersFromChapterGrid(in: document)
+    }
+
+    private struct AlpineChapter: Decodable {
+        let id: Int
+        let title: String
+    }
+
+    private static func chaptersFromAlpineData(in document: HTMLDocument) -> [Chapter]? {
+        let container = document.queryFirst { node in
+            (node.attribute("x-data") ?? "").contains("chapters:")
+        }
+        guard let data = container?.attribute("x-data"),
+              let keyRange = data.range(of: "chapters:") else { return nil }
+
+        let characters = Array(data[keyRange.upperBound...])
+        guard let start = characters.firstIndex(of: "["),
+              let end = matchingBracket(characters, from: start) else { return nil }
+
+        let json = HTMLEntities.decode(String(characters[start...end]))
+        guard let payload = json.data(using: .utf8),
+              let items = try? JSONDecoder().decode([AlpineChapter].self, from: payload) else { return nil }
+
+        var seen = Set<String>()
+        var chapters: [Chapter] = []
+        for item in items {
+            let id = String(item.id)
+            guard !seen.contains(id) else { continue }
+            let title = item.title.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !title.isEmpty else { continue }
+            seen.insert(id)
+            chapters.append(Chapter(id: id, title: title))
+        }
+        return chapters.isEmpty ? nil : chapters
+    }
+
+    /// Fallback for pages without the embedded data: only anchors inside the
+    /// chapter grid are accepted, which excludes the "最近更新" sidebar.
+    private static func chaptersFromChapterGrid(in document: HTMLDocument) -> [Chapter] {
         let anchors = document.queryAll { node in
             guard node.tag == "a", let href = node.attribute("href") else { return false }
-            return href.contains("/cn/chapters/")
+            return href.contains("/cn/chapters/") && isInsideChapterGrid(node)
         }
 
         var seen = Set<String>()
@@ -130,6 +174,51 @@ enum MyComicParser {
         }
 
         return chapters
+    }
+
+    private static func isInsideChapterGrid(_ node: HTMLNode) -> Bool {
+        var ancestor = node.parent
+        var depth = 0
+        while let current = ancestor, depth < 8 {
+            if current.tag == "template" { return false }
+            if current.classNames.contains(where: { $0.hasPrefix("grid-cols") }) { return true }
+            ancestor = current.parent
+            depth += 1
+        }
+        return false
+    }
+
+    /// Returns the index of the `]` matching the `[` at `start`, ignoring
+    /// brackets that appear inside JSON string literals.
+    private static func matchingBracket(_ characters: [Character], from start: Int) -> Int? {
+        var depth = 0
+        var inString = false
+        var index = start
+
+        while index < characters.count {
+            let character = characters[index]
+            if inString {
+                if character == "\\" {
+                    index += 1
+                } else if character == "\"" {
+                    inString = false
+                }
+            } else {
+                switch character {
+                case "\"":
+                    inString = true
+                case "[":
+                    depth += 1
+                case "]":
+                    depth -= 1
+                    if depth == 0 { return index }
+                default:
+                    break
+                }
+            }
+            index += 1
+        }
+        return nil
     }
 
     // MARK: - Chapter images

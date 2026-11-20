@@ -9,6 +9,7 @@ struct DetailView: View {
     @StateObject private var viewModel: DetailViewModel
     @EnvironmentObject private var session: SessionViewModel
     @State private var summaryExpanded = false
+    @State private var readerRoute: ReaderRoute?
 
     init(comicId: String, title: String, coverURLString: String) {
         _viewModel = StateObject(wrappedValue: DetailViewModel(
@@ -46,6 +47,9 @@ struct DetailView: View {
         .onAppear {
             viewModel.loadIfNeeded()
             viewModel.refreshShelfState()
+        }
+        .fullScreenCover(item: $readerRoute) { route in
+            ReaderView(route: route)
         }
     }
 
@@ -129,7 +133,9 @@ struct DetailView: View {
 
     private func actionButtons(_ detail: ComicDetail) -> some View {
         HStack(spacing: 12) {
-            NavigationLink(destination: ReaderView(route: readingRoute(detail))) {
+            Button {
+                readerRoute = readingRoute(detail)
+            } label: {
                 HStack(spacing: 6) {
                     Image(systemName: "book.fill")
                     Text(viewModel.canContinue ? "继续阅读" : "开始阅读")
@@ -245,13 +251,15 @@ struct DetailView: View {
             } else {
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 96), spacing: 8)], spacing: 8) {
                     ForEach(viewModel.orderedChapters) { chapter in
-                        NavigationLink(destination: ReaderView(route: ReaderRoute(
-                            comicId: detail.id,
-                            comicTitle: detail.title,
-                            coverURLString: detail.coverURLString,
-                            chapterId: chapter.id,
-                            chapterTitle: chapter.title
-                        ))) {
+                        Button {
+                            readerRoute = ReaderRoute(
+                                comicId: detail.id,
+                                comicTitle: detail.title,
+                                coverURLString: detail.coverURLString,
+                                chapterId: chapter.id,
+                                chapterTitle: chapter.title
+                            )
+                        } label: {
                             Text(chapter.title)
                                 .font(.caption)
                                 .lineLimit(1)
