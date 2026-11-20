@@ -1,121 +1,147 @@
-# MyComic for iOS
+# MyComic — 原生 iOS 漫画客户端
 
-MyComic 是一个使用 **Swift + SwiftUI + WKWebView** 开发的 iPhone / iPad 客户端，用于浏览 **https://mycomic.com/cn**。应用完整保留网站自身的页面、账号会话、搜索、分类、收藏与漫画阅读功能，并由 **GitHub Actions** 自动构建未签名 IPA，供用户使用 AltStore、Sideloadly、SideStore、爱思助手等工具自行签名安装。
+MyComic 是一个使用 **Swift + SwiftUI** 编写的第三方原生 iOS 漫画客户端，数据来自 `https://mycomic.com/cn`。
 
-- 仓库：https://github.com/desire668/mycomic
-- Actions 工作流：https://github.com/desire668/mycomic/actions/workflows/build-ipa.yml
-- 直接下载 IPA（公开）：https://github.com/desire668/mycomic/releases/download/v1.0.0/MyComic-unsigned.ipa
-- Release 页面：https://github.com/desire668/mycomic/releases/tag/v1.0.0
-- 最新 CI 产物：Actions 页面中最新一次 `Build Unsigned IPA` 运行 → Artifacts → `MyComic-unsigned-ipa`
+本项目**不是网页壳**：首页、分类、排行榜、搜索、漫画详情、章节列表、书架、个人中心和漫画阅读器全部由 SwiftUI 原生实现，网络数据由 Swift `URLSession` 获取，HTML 由项目内置的解析器提取。WKWebView 仅用于用户主动发起的 Cloudflare 交互验证。
 
-> 本项目只生成**未签名 IPA**，不包含、也不需要 Apple 开发者证书、企业证书、Apple ID 或任何私钥。
+> 本项目与 mycomic.com 官方无关，不提供、不托管任何漫画内容。请遵守当地法律与网站条款，支持正版。
 
 ---
 
-## 功能列表
+## 1. 功能列表
 
-### 启动与界面
-- 原生 SwiftUI 启动页（Logo + 名称 + 渐变背景），首页首屏加载完成或 3 秒超时后自动淡出，避免白屏
-- 原生底部导航栏：**首页 / 分类 / 搜索 / 书架 / 我的**，每一项都对应网站真实存在的页面
-- 原生顶部导航栏：后退、前进、页面标题、刷新/停止、全屏阅读
-- 支持 iPhone 与 iPad、横竖屏、状态栏与安全区域适配
-- 深色/浅色模式自动适配（跟随系统）
+### 已实现并通过代码/测试验证
 
-### 网页能力
-- WKWebView 加载 `https://mycomic.com/cn`，开启 JavaScript
-- 持久化 Cookie 与本地会话（`WKWebsiteDataStore.default()`），关闭再打开仍保持网站登录状态
-- 网页内部跳转、`target="_blank"` 新窗口链接均在应用内正常打开
-- 站外链接、`tel:`、`mailto:` 使用系统浏览器 / 系统应用打开
-- 下拉刷新（`UIRefreshControl`）
-- 顶部细进度条（`estimatedProgress`）
-- 网络异常、超时、服务器错误、证书错误均有原生错误页与「重新加载」
-- 断网时顶部显示离线提示条
-- 网页进程被系统回收后自动恢复
-- 支持 JS `alert / confirm / prompt` 弹窗
+| 模块 | 功能 |
+|---|---|
+| 首页 | 最近更新、最新上架、人气推荐；下拉刷新；分页；加载/空数据/错误状态；继续阅读卡片 |
+| 分类 | 按类型 / 地区 / 受众 / 年份 / 连载状态组合筛选；排序；分页；清除筛选 |
+| 排行榜 | 周榜 / 月榜 / 总榜（站点实际提供的三个榜单） |
+| 搜索 | 关键词搜索；输入防抖；搜索历史（本地）；清空历史；排序；分页 |
+| 详情 | 封面、标题、作者、简介、地区、标签、连载状态、章节总数、章节正序/倒序 |
+| 阅读器 | 纵向连续阅读、单页左右翻页、双击/捏合缩放、上一章/下一章、目录跳转、进度保存与恢复、图片预加载、内存 + 磁盘缓存、屏幕常亮、横竖屏、iPhone/iPad 适配 |
+| 书架 | 本地收藏、移除、最近阅读、继续阅读（书架保存在本机，**不是**服务器收藏） |
+| 我的 | 站点登录状态检测、实验性原生登录、Cloudflare 验证状态、Cookie 管理 |
+| 设置 | 阅读模式、自动加载下一章、屏幕常亮、保存历史、清理图片缓存、清理网络缓存、清除 Cookie（二次确认）、Cloudflare 验证入口、网络状态、版本信息 |
+| 网络 | 统一 `APIClient`、超时、重试、Cookie、Cloudflare 检测、错误映射、请求取消 |
+| 图片 | JPEG/PNG/WebP 自动识别、Referer、下采样解码、NSCache 内存缓存、磁盘 LRU 裁剪、请求去重、预加载 |
 
-### 浏览与阅读
-- 分类页直接使用网站 `/cn/comics`，支持站点自带排序、受众、地区、连载状态筛选与分页
-- 搜索使用网站自身的 `GET /cn/comics?q=关键词`，结果与网站完全一致；支持本地「最近搜索」
-- 书架（`/cn/bookmarks`）、观看记录（`/cn/records`）、排行榜（`/cn/rank`）、最新上架均使用网站真实页面
-- 漫画章节页（`/cn/chapters/...`）可一键进入**全屏阅读**（隐藏状态栏、顶栏与底栏），保留网站原有阅读交互与横屏阅读
+### 已知限制（请务必阅读）
 
-### 设置（原生）
-- 清除网页缓存
-- 清除 Cookie 与登录状态（删除前二次确认，会退出网站账号）
-- 实时网络状态与连接类型检测
-- 查看应用版本、网站地址、关于应用与合规说明
-
-### 明确不做的事
-- 不绕过网站登录验证、付费机制、访问控制或 DRM
-- 不抓取、不缓存、不转载漫画内容；所有内容直接来自官方网站
-- 不集成任何广告、统计或付费第三方 SDK
+- **站点没有公开 JSON API**。所有列表、搜索、详情、章节和图片地址均来自服务端渲染的 HTML，通过 `MyComicParser` 解析。网站改版会导致解析失败。
+- **Cloudflare 无法、也不应被绕过**。应用只提供交互式验证页面，并尝试同步 Cookie。`cf_clearance` 与 IP、User-Agent、有效期绑定，同步后仍可能失败；失败时应用会明确提示。
+- **书架与阅读历史仅保存在本机**（JSON 文件 + `Application Support`），站点没有可用的收藏 API。
+- **登录为实验性功能**：表单字段依据网站实际页面实现，但登录后的完整用户中心功能尚未验证，失败时不会伪造成功。
+- 章节图片 CDN 必须携带 `Referer: https://mycomic.com/`，否则返回 403。应用已按此实现，但 CDN 策略随时可能调整。
+- 未签名 IPA 不能直接安装，需要自签名工具（见下文）。
 
 ---
 
-## 技术栈
-
-| 项目 | 说明 |
-| --- | --- |
-| 语言 | Swift 5 |
-| UI | SwiftUI（少量 UIKit 桥接：WKWebView、UIRefreshControl、UIAlertController、NWPathMonitor） |
-| 最低系统 | iOS 15.0 |
-| 设备 | iPhone + iPad（`TARGETED_DEVICE_FAMILY = 1,2`） |
-| 工程 | `MyComic.xcodeproj`，Xcode 15+ 可直接打开 |
-| CI | GitHub Actions，`macos-14` Runner + Xcode 15.x |
-
----
-
-## 目录结构
+## 2. 技术架构
 
 ```
-MyComic.xcodeproj/                 # Xcode 工程（含共享 Scheme）
+SwiftUI View
+    ↓ 只负责展示 / 用户交互
+ViewModel (@MainActor, ObservableObject)
+    ↓
+ComicRepository（缓存 / 分页 / 数据转换 / 错误传递）
+    ↓
+MyComicAPI（接口定义） → APIClient（URLSession / Cookie / 错误映射）
+    ↓
+MyComicParser + HTMLDocument（无第三方依赖的 HTML 解析）
+    ↓
+ImagePipeline（内存 + 磁盘缓存、下采样、预加载、去重）
+```
+
+目录结构：
+
+```
 MyComic/
-├── App/
-│   └── MyComicApp.swift           # @main 入口
-├── Models/
-│   └── WebTab.swift               # 五个 Tab 与网站真实路由
-├── Views/
-│   ├── ContentView.swift          # 根容器、Tab 切换、启动页控制
-│   ├── WebScreen.swift            # 单个网页 Tab（顶栏 + 进度条 + 内容）
-│   ├── WebView.swift              # UIViewRepresentable 桥接
-│   ├── SearchView.swift           # 原生搜索入口 + 最近搜索
-│   ├── ProfileView.swift          # 我的（观看记录 / 排行 / 设置…）
-│   ├── SettingsView.swift         # 设置与关于
-│   ├── LaunchView.swift           # 原生启动页
-│   └── WebPageSheet.swift         # 次级页面模态浏览器
-├── Components/
-│   ├── HeaderBar.swift            # 原生导航栏
-│   ├── BottomTabBar.swift         # 原生底部导航栏
-│   ├── ProgressBar.swift          # 加载进度条
-│   ├── LoadingView.swift          # 首屏加载提示
-│   ├── ErrorStateView.swift       # 原生错误页
-│   └── OfflineBanner.swift        # 离线提示
+├── App/                 MyComicApp.swift（入口、环境对象、Tab）
+├── Models/              Comic / ComicDetail / Chapter / RankEntry ...
 ├── Services/
-│   ├── WebViewModel.swift         # WKWebView 生命周期与导航状态
-│   ├── BrowserSession.swift       # 共享配置、Cookie/缓存管理
-│   ├── NetworkMonitor.swift       # NWPathMonitor 网络检测
-│   └── AppInfo.swift              # 版本信息
-└── Resources/
-    ├── Info.plist
-    └── Assets.xcassets            # AppIcon、启动图、强调色
-.github/workflows/build-ipa.yml    # 未签名 IPA 自动构建
+│   ├── APIClient.swift  URLSession、请求头、Cloudflare 检测、UA
+│   ├── MyComicAPI.swift 首页 / 列表 / 搜索 / 排行 / 详情 / 章节
+│   ├── MyComicParser.swift 基于 HTML 的结构化解析
+│   ├── HTMLDocument.swift 轻量 HTML 解析器（无第三方依赖）
+│   ├── CookieManager.swift Cookie 同步 / 清理 / WKWebView 配置
+│   ├── ImagePipeline.swift 图片下载、缓存、下采样
+│   ├── LibraryStore.swift 本地书架与阅读历史
+│   ├── SettingsStore.swift 阅读设置
+│   └── NetworkMonitor.swift NWPathMonitor
+├── Repositories/        ComicRepository
+├── ViewModels/          Home / List / Search / Detail / Reader / Rank / Profile / Session
+├── Views/               Home / Category / Search / Detail / Reader / Shelf / Profile / Settings
+├── Components/          ComicCard / ComicGrid / RemoteImageView / ErrorStateView ...
+└── Resources/           Info.plist / Assets.xcassets
+Tests/MyComicTests/      解析、网络、Cloudflare、缓存相关单元测试
+docs/API_ANALYSIS.md     接口调查与实测记录
+.github/workflows/build-ipa.yml
 ```
 
-架构要点：
-- 每个网页 Tab **只创建一个 `WKWebView`**，由 `WebViewModel` 持有，切换 Tab 不会重新创建或重新加载
-- 所有 Tab 共享同一个 `WKProcessPool` 与 `WKWebsiteDataStore`，登录态一致、内存占用更低
-- 首次进入某个 Tab 时才加载首页（`startIfNeeded()`），避免启动时并发请求
+最低系统版本：**iOS 15.0**，支持 iPhone 与 iPad。
 
 ---
 
-## 本地运行
+## 3. 项目截图
 
-1. 安装 Xcode 15 或更新版本（macOS）。
-2. 打开 `MyComic.xcodeproj`。
-3. 选择 `MyComic` Scheme 与任意 iPhone / iPad 模拟器或真机。
-4. 真机运行时，在 *Signing & Capabilities* 中选择你自己的 Team（仅本机调试需要，CI 构建不需要签名）。
+本仓库不放置伪造截图。运行应用后可自行截图；推荐截取：首页、分类筛选、搜索结果、漫画详情、纵向阅读器、单页阅读器、书架、设置页。
 
-命令行构建（未签名）：
+在 GitHub Actions 成功构建后，可从 Artifacts 下载 IPA 安装到设备后截图补充。
+
+---
+
+## 4. API 数据来源说明
+
+站点为 Laravel + Livewire 服务端渲染页面，**没有公开 JSON API**。实测确认的数据来源：
+
+| 数据 | 实际请求 |
+|---|---|
+| 列表 / 筛选 / 搜索 | `GET https://mycomic.com/cn/comics`，参数 `q`、`sort`、`filter[tag]`、`filter[country]`、`filter[audience]`、`filter[year]`、`filter[end]`、`page` |
+| 最新上架 | 默认排序（等价于按 id 倒序） |
+| 最近更新 | `?sort=-update` |
+| 最高人气 | `?sort=-views` |
+| 排行榜 | `GET /cn/rank`，`?sort=-week` / `-month` / `-views` |
+| 漫画详情 | `GET /cn/comics/{id}` |
+| 章节阅读 | `GET /cn/chapters/{id}` |
+| 图片 CDN | `https://biccam.com/...`，必须携带 `Referer: https://mycomic.com/` |
+
+分页为 `page=N`，每页 30 部；排行榜为单页 50 条、无分页。
+
+完整请求示例、字段说明、响应样本和未验证项见 **[docs/API_ANALYSIS.md](docs/API_ANALYSIS.md)**。
+
+参考项目：[venera-configs/mycomic.js](https://github.com/venera-app/venera-configs/blob/main/mycomic.js)（仅作功能与数据结构参考，Swift 代码为独立实现）。
+
+---
+
+## 5. Cloudflare 交互验证说明
+
+1. 正常业务请求全部使用 `URLSession`；当响应出现 403/503/429 且带有 Cloudflare 特征（`Just a moment...`、`challenge-platform`、`cf-mitigated` 等）时，映射为 `AppError.cloudflareRequired`。
+2. 界面显示明确提示与「进行 Cloudflare 验证」按钮。
+3. 用户主动打开独立 `WKWebView` 页面，手动完成 Cloudflare 的交互验证。
+4. 点击「完成验证并同步 Cookie」后，应用把 `mycomic.com` / `biccam.com` 的 Cookie 写入 `HTTPCookieStorage`，并记录 WebView 的 User-Agent 供 `URLSession` 使用。
+5. 应用**不会**破解挑战、伪造验证结果、伪造浏览器指纹，也不使用任何第三方 CF 绕过服务。
+6. 若 Cookie 无法用于原生请求，应用会如实报错，不会声称验证成功。
+
+> 说明：`cf_clearance` 可能与出口 IP、UA、浏览器环境以及有效期绑定。即使同步成功，也可能在更换网络后失效，需要重新验证。
+
+---
+
+## 6. Xcode 本地编译
+
+环境要求：Xcode 15+，macOS，iOS 15+ 的真机或模拟器。
+
+```bash
+git clone https://github.com/desire668/mycomic.git
+cd mycomic
+open MyComic.xcodeproj
+```
+
+- Scheme：`MyComic`
+- 运行目标：任意 iPhone / iPad（iOS 15+）
+- 无需 CocoaPods / Swift Package 依赖，项目可直接编译。
+
+命令行构建：
 
 ```bash
 xcodebuild \
@@ -125,125 +151,102 @@ xcodebuild \
   -sdk iphoneos \
   -destination "generic/platform=iOS" \
   -derivedDataPath build \
-  CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
-  CODE_SIGN_IDENTITY="" DEVELOPMENT_TEAM="" \
-  clean build
+  CODE_SIGNING_ALLOWED=NO clean build
+```
+
+运行单元测试：
+
+```bash
+xcodebuild test \
+  -project MyComic.xcodeproj \
+  -scheme MyComic \
+  -destination "platform=iOS Simulator,name=iPhone 16"
 ```
 
 ---
 
-## GitHub Actions 自动构建
+## 7. GitHub Actions
 
-工作流文件：[`.github/workflows/build-ipa.yml`](.github/workflows/build-ipa.yml)
+工作流：[.github/workflows/build-ipa.yml](.github/workflows/build-ipa.yml)
 
-触发方式：
+- 触发：push 到 `main`、手动 `workflow_dispatch`、发布 GitHub Release。
+- `test` Job：在 iOS 模拟器上运行 `MyComicTests`（解析、网络错误映射、Cloudflare 检测、图片下采样）。
+- `build` Job：`macos-latest` + Release + `generic/platform=iOS` + `CODE_SIGNING_ALLOWED=NO`，无需证书和 Apple Developer 账号。
+- 校验：`.app` 是否存在、`Info.plist`、Bundle Identifier（`com.mycomic.app`）、最低系统（15.0）、Payload 结构、zip 完整性。
+- 产物：`MyComic-unsigned.ipa`（Artifacts，保留 30 天）；Release 触发时自动附加到 Release 资产。
 
-| 触发 | 说明 |
-| --- | --- |
-| `push` 到 `main` | 自动编译并上传 Artifact |
-| Actions 页面 → Run workflow | 手动编译 |
-| 创建/发布 Release | 构建并自动把 IPA 附加到该 Release |
+### IPA 下载
 
-构建流程：
-
-1. `macos-14` Runner 上使用 Xcode 15.x
-2. `xcodebuild -list` 解析工程与 Scheme
-3. 以 `generic/platform=iOS`、`Release`、`arm64` 编译
-4. 通过 `CODE_SIGNING_ALLOWED=NO`、`CODE_SIGN_IDENTITY=""` 关闭签名
-5. 校验 `.app` 产物
-6. 组装 `Payload/MyComic.app` 并压缩为 `MyComic-unsigned.ipa`
-7. 校验 IPA 结构（必须包含 `Payload/MyComic.app/MyComic`）
-8. 上传 Artifact：`MyComic-unsigned-ipa`
-
-### 下载 IPA
-
-- 最快方式（无需登录）：[Release v1.0.0 直接下载 MyComic-unsigned.ipa](https://github.com/desire668/mycomic/releases/download/v1.0.0/MyComic-unsigned.ipa)
-- 或从 Actions 下载最新构建：
-
-1. 打开 [Actions 页面](https://github.com/desire668/mycomic/actions/workflows/build-ipa.yml)
-2. 点击最新一次绿色 `Build Unsigned IPA` 运行
-3. 页面底部 **Artifacts** → 下载 `MyComic-unsigned-ipa`（需要登录 GitHub）
-4. 解压后得到 `MyComic-unsigned.ipa`
-
-若通过 Release 触发，也可直接在该 Release 的 Assets 中下载 `MyComic-unsigned.ipa`。
+1. 打开仓库 **Actions** → 最新成功的 **Build Unsigned IPA**。
+2. 在页面底部 **Artifacts** 下载 `MyComic-unsigned-ipa.zip`，解压得到 `MyComic-unsigned.ipa`。
+3. 或在 **Releases** 页面下载同名的 `.ipa` 文件（由 Release 触发构建时生成）。
 
 ---
 
-## 自行签名安装教程
+## 8. 安装教程（需自签名）
 
-未签名 IPA 无法直接安装，需要使用你自己的 Apple ID 签名。以下方式任选其一。
+未签名 IPA 不能直接安装，以下工具均需要你自己的 Apple ID（免费账号也可，签名有效期 7 天）。
 
-> 通用前提：免费 Apple ID 签名的应用 **7 天过期**（付费开发者账号为 1 年）；免费账号同时最多签名 3 个应用；过期后重新签名即可，数据通常保留。请勿使用共享/来源不明的 Apple ID。
+### AltStore
 
-### 方式一：AltStore（Windows / macOS，推荐长期使用）
+1. 电脑安装 [AltServer](https://altstore.io/)，iPhone 安装 AltStore（通过 AltServer 安装）。
+2. 在 iPhone「设置 → 通用 → VPN 与设备管理」中信任开发者证书。
+3. 把 IPA 传到 iPhone（AirDrop / 文件 App），在 AltStore 的 **My Apps → +** 中选择该 IPA。
+4. 输入 Apple ID 完成签名安装。免费账号需每 7 天刷新一次。
 
-1. 电脑安装 [AltServer](https://altstore.io/)，手机安装 AltStore（首次需用 AltServer 安装到手机）。
-2. 手机与电脑连接同一 Wi-Fi，或使用 USB 数据线。
-3. 在电脑托盘的 AltServer 图标中选择 **Install AltStore → 你的设备**，输入 Apple ID 完成安装。
-4. 手机打开 **设置 → 通用 → VPN 与设备管理**，信任你的开发者证书。
-5. 把 `MyComic-unsigned.ipa` 传到手机（AirDrop / 文件 App / iCloud 均可），在文件 App 中点击 IPA → 分享 → **AltStore**；或在 AltStore 的 *My Apps* 页点击左上角 `+` 选择该 IPA。
-6. 输入 Apple ID 与密码完成签名安装。
-7. 保持 AltServer 在同一网络运行，AltStore 会每 7 天自动续签。
+### SideStore
 
-### 方式二：Sideloadly（Windows / macOS，操作最简单）
+1. 按 [SideStore 文档](https://sidestore.io/) 使用 AltServer / Jitterbug 完成首次安装。
+2. 在 SideStore 中 **+** 选择 IPA，登录 Apple ID 签名安装。
+3. 支持同一 Wi-Fi 下无线刷新（需配对文件）。
 
-1. 下载安装 [Sideloadly](https://sideloadly.io/) 与 iTunes（Windows 需要）。
-2. 用数据线连接 iPhone / iPad，解锁并在手机上点「信任此电脑」。
-3. 打开 Sideloadly，把 `MyComic-unsigned.ipa` 拖入 **IPA** 栏。
-4. 填写 **Apple ID**，点击 **Start**，输入密码（如开启双重认证，需使用专用 App 密码）。
-5. 安装完成后，进入 **设置 → 通用 → VPN 与设备管理 → 开发者 App**，点击你的 Apple ID 并选择「信任」。
-6. 回到桌面打开 MyComic。7 天后如需继续使用，用同样步骤重新签名安装。
+### Sideloadly
 
-### 方式三：SideStore（免电脑续签，进阶）
+1. 电脑安装 [Sideloadly](https://sideloadly.io/) 与 iTunes（Windows）。
+2. 连接 iPhone，拖入 `MyComic-unsigned.ipa`，填写 Apple ID。
+3. 点击 Start，输入 Apple ID 密码/专用密码，等待完成。
+4. 首次启动前在「设置 → 通用 → VPN 与设备管理」信任证书。
 
-1. 按 [SideStore 官方文档](https://sidestore.io/) 使用 AltServer / Jitterbug 等方式首次安装 SideStore 并配对。
-2. 将 `MyComic-unsigned.ipa` 保存到「文件」App。
-3. 在 SideStore 中点击 `+`，选择该 IPA，使用你的 Apple ID 签名安装。
-4. SideStore 可通过 WireGuard 在本机完成 7 天续签，无需电脑常驻。
+### 爱思助手
 
-### 方式四：爱思助手（Windows）
+1. 电脑安装爱思助手并连接 iPhone。
+2. 打开「工具箱 → IPA 签名」，添加 `MyComic-unsigned.ipa`，使用自己的 Apple ID 签名。
+3. 签名完成后通过「应用游戏 → 导入安装」安装到设备。
+4. 若提示未信任，前往「设置 → 通用 → VPN 与设备管理」信任。
 
-1. 安装最新版[爱思助手](https://www.i4.cn/)，用数据线连接设备并在手机上信任电脑。
-2. 打开「工具箱 → IPA 签名」，添加 `MyComic-unsigned.ipa`。
-3. 使用自己的 Apple ID 登录（爱思助手会调用 Apple 签名服务），点击「开始签名」。
-4. 签名完成后在「已签名 IPA」中点击安装到设备。
-5. 首次打开如提示未受信任，进入 **设置 → 通用 → VPN 与设备管理** 信任对应证书。
-
-### 安装失败排查
-
-| 现象 | 处理 |
-| --- | --- |
-| 提示「无法安装，请稍后重试」 | Apple ID 未完成双重认证、密码错误，或短时间内签名次数过多，换网络/稍后再试 |
-| 桌面图标灰色 / 无法打开 | 未信任证书：设置 → 通用 → VPN 与设备管理 → 信任 |
-| 打开即闪退 | 设备 iOS 低于 15.0；或 IPA 未正确签名，请重新签名 |
-| 7 天后无法打开 | 免费账号证书过期，重新签名安装即可 |
-| AltStore 提示找不到设备 | 确认电脑与手机同一 Wi-Fi，或改用 USB 连接并安装 iTunes 驱动 |
+> 以上工具均可能要求关闭「查找我的 iPhone」或使用专用密码；请以工具最新文档为准。请勿使用来历不明的企业证书。
 
 ---
 
-## 常见问题
+## 9. 常见问题
 
-**Q：为什么不直接提供已签名 IPA？**
-A：签名必须绑定你自己的 Apple ID 与设备，任何人的证书都无法通用；本项目按合规要求只提供未签名 IPA。
+**Q：首页一直提示 Cloudflare 验证？**
+A：从设置或错误页进入验证页面，完成网站提供的交互验证并同步 Cookie。若仍失败，通常是出口 IP 或 Cookie 有效期问题，请更换网络后重试。应用不会绕过验证。
 
-**Q：网站需要登录/付费怎么办？**
-A：应用内直接加载官方网站，登录、注册、付费与访问控制完全由网站处理，应用不做任何绕过。
+**Q：图片显示 403？**
+A：图片 CDN 要求 `Referer`。应用已自动携带 `https://mycomic.com/`；若 CDN 规则变化，需要更新代码。
 
-**Q：会不会收集我的数据？**
-A：不会。应用没有账号系统、统计 SDK 或广告 SDK，Cookie 与缓存仅保存在本机，可在设置中清除。
+**Q：书架能同步到网站账号吗？**
+A：不能。站点没有公开收藏 API，书架与历史仅保存在本机。卸载应用会丢失。
 
-**Q：为什么 iPad 上显示的是桌面版布局？**
-A：iPadOS 的 WKWebView 默认使用桌面版 User-Agent，网站会返回响应式桌面布局，功能与网页一致。
+**Q：搜索/详情空白？**
+A：可能是网站改版导致 HTML 结构变化，请在 Issues 中附上页面地址与截图。
 
-**Q：构建失败怎么办？**
-A：在 Actions 运行页面下载 `build-log` Artifact 查看完整 `xcodebuild` 日志；常见原因是 Xcode 版本变化或工程文件损坏。
+**Q：登录为什么标记为“实验性”？**
+A：登录表单字段已在真实页面确认，但登录后的用户中心接口未完整验证；应用不会伪造登录成功。
+
+**Q：iOS 15 能安装吗？**
+A：可以，最低版本为 iOS 15.0。
+
+**Q：IPA 安装失败？**
+A：确认已使用自己的证书签名；免费 Apple ID 需要每 7 天重签；Bundle ID 冲突时可在签名工具中修改。
 
 ---
 
-## 合规与免责声明
+## 10. 免责声明
 
-- 本项目为第三方浏览器客户端，与 mycomic.com 无隶属关系，不代表网站官方立场。
-- 应用不存储、不转载、不分发任何漫画内容；所有页面、图片与数据均来自官方网站。
-- 不绕过登录验证、付费机制、访问控制或 DRM。
-- 漫画内容版权归原作者及权利方所有，请遵守当地法律法规与网站使用条款。
-- 本项目仅用于技术学习与个人使用，请自行承担使用风险。
+- 本项目为第三方开源客户端，与 mycomic.com 官方无任何关联。
+- 所有漫画内容、图片、商标及版权归原作者与 mycomic.com 所有。
+- 本项目不存储、不托管、不分发漫画内容，仅通过公开网页请求读取数据。
+- 使用本项目产生的任何后果由使用者自行承担，请遵守当地法律法规及网站服务条款。
+- 请勿将本项目用于商业用途或大规模抓取。
