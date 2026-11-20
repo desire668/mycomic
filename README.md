@@ -4,8 +4,9 @@ MyComic 是一个使用 **Swift + SwiftUI + WKWebView** 开发的 iPhone / iPad 
 
 - 仓库：https://github.com/desire668/mycomic
 - Actions 工作流：https://github.com/desire668/mycomic/actions/workflows/build-ipa.yml
-- 最新构建产物：Actions 页面中最新一次 `Build Unsigned IPA` 运行 → Artifacts → `MyComic-unsigned-ipa`
-- 正式版本：Releases 页面中的 `MyComic-unsigned.ipa`
+- 直接下载 IPA（公开）：https://github.com/desire668/mycomic/releases/download/v1.0.0/MyComic-unsigned.ipa
+- Release 页面：https://github.com/desire668/mycomic/releases/tag/v1.0.0
+- 最新 CI 产物：Actions 页面中最新一次 `Build Unsigned IPA` 运行 → Artifacts → `MyComic-unsigned-ipa`
 
 > 本项目只生成**未签名 IPA**，不包含、也不需要 Apple 开发者证书、企业证书、Apple ID 或任何私钥。
 
@@ -155,6 +156,9 @@ xcodebuild \
 8. 上传 Artifact：`MyComic-unsigned-ipa`
 
 ### 下载 IPA
+
+- 最快方式（无需登录）：[Release v1.0.0 直接下载 MyComic-unsigned.ipa](https://github.com/desire668/mycomic/releases/download/v1.0.0/MyComic-unsigned.ipa)
+- 或从 Actions 下载最新构建：
 
 1. 打开 [Actions 页面](https://github.com/desire668/mycomic/actions/workflows/build-ipa.yml)
 2. 点击最新一次绿色 `Build Unsigned IPA` 运行

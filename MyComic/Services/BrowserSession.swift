@@ -18,7 +18,6 @@ enum BrowserSession {
     static let configuration: WKWebViewConfiguration = {
         let configuration = WKWebViewConfiguration()
         configuration.websiteDataStore = dataStore
-        configuration.processPool = WKProcessPool()
 
         let preferences = WKWebpagePreferences()
         preferences.allowsContentJavaScript = true
