@@ -116,7 +116,8 @@ struct HTMLDocument {
     let root: HTMLNode
 
     init(html: String) {
-        root = HTMLParser(html: html).parse()
+        var parser = HTMLParser(html: html)
+        root = parser.parse()
     }
 
     func meta(_ key: String) -> String? {

@@ -41,9 +41,14 @@ enum CookieManager {
         let cookies = HTTPCookieStorage.shared.cookies?.filter { $0.domain.contains(domain) } ?? []
         let clearance = cookies.first { $0.name == "cf_clearance" }
         let sessionCookies = cookies.filter { $0.name != "cf_clearance" }
+        let now = Date()
+        let hasClearance = clearance.map { cookie in
+            guard let expiry = cookie.expiresDate else { return true }
+            return expiry > now
+        } ?? false
         return Status(
             cookieCount: cookies.count,
-            hasClearance: clearance != nil && !(clearance?.isExpired ?? true),
+            hasClearance: hasClearance,
             clearanceExpiry: clearance?.expiresDate,
             sessionCookieCount: sessionCookies.count,
             userAgent: UserAgentProvider.current

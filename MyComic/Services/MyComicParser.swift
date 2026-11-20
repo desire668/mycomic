@@ -84,10 +84,10 @@ enum MyComicParser {
             else if text.contains("连载中") { status = "连载中" }
         }
 
-        var chapters = parseChapters(in: document)
+        let chapters = parseChapters(in: document)
         let pageText = document.root.textContent
         var chapterCount = chapters.count
-        if let declared = Regex.firstMatch(pattern: "共\\s*(\\d+)\\s*话", in: pageText).flatMap(Int.init) {
+        if let declared = Regex.firstMatch(pattern: "共\\s*(\\d+)\\s*话", in: pageText).flatMap({ Int($0) }) {
             chapterCount = declared
         }
 
@@ -151,7 +151,7 @@ enum MyComicParser {
             seen.insert(key)
 
             let page = Regex.firstMatch(pattern: "^(\\d+)-[0-9a-zA-Z]+\\.[a-zA-Z]+$", in: url.lastPathComponent)
-                .flatMap(Int.init)
+                .flatMap { Int($0) }
             collected.append((page, collected.count, url))
         }
 

@@ -161,7 +161,7 @@ enum RankBoard: String, CaseIterable, Identifiable {
 
 // MARK: - Local shelf / reading history
 
-struct ReadingRecord: Codable, Hashable {
+struct ReadingRecord: Codable, Hashable, Identifiable {
     let comicId: String
     var comicTitle: String
     var coverURLString: String
@@ -171,6 +171,7 @@ struct ReadingRecord: Codable, Hashable {
     var pageCount: Int
     var updatedAt: Date
 
+    var id: String { comicId }
     var coverURL: URL? { URL(string: coverURLString) }
 
     var progressText: String {
