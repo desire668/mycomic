@@ -120,11 +120,11 @@ enum MyComicParser {
     }
 
     private static func chaptersFromAlpineData(in document: HTMLDocument) -> [Chapter]? {
-        let container = document.queryFirst { node in
+        guard let container = document.queryAll({ node in
             (node.attribute("x-data") ?? "").contains("chapters:")
-        }
-        guard let data = container?.attribute("x-data"),
-              let keyRange = data.range(of: "chapters:") else { return nil }
+        }).first,
+        let data = container.attribute("x-data"),
+        let keyRange = data.range(of: "chapters:") else { return nil }
 
         let characters = Array(data[keyRange.upperBound...])
         guard let start = characters.firstIndex(of: "["),
