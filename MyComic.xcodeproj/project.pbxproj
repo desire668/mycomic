@@ -70,14 +70,22 @@
 		A10000000000000000000002 = {
 			isa = PBXGroup;
 			children = (
+				A10000000000000000000015 /* MyComic */,
+				A10000000000000000000003 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		A10000000000000000000015 /* MyComic */ = {
+			isa = PBXGroup;
+			children = (
 				A1000000000000000000000F /* App */,
 				A10000000000000000000010 /* Views */,
 				A10000000000000000000011 /* Components */,
 				A10000000000000000000012 /* Services */,
 				A10000000000000000000013 /* Models */,
 				A10000000000000000000014 /* Resources */,
-				A10000000000000000000003 /* Products */,
 			);
+			path = MyComic;
 			sourceTree = "<group>";
 		};
 		A10000000000000000000003 /* Products */ = {
